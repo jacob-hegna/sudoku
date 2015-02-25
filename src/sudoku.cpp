@@ -2,6 +2,8 @@
 
 #include <stdint.h>
 #include <cmath>
+#include <algorithm>
+#include <vector>
 
 Sudoku::Sudoku(void) {
 
@@ -19,8 +21,8 @@ void Sudoku::init(std::array<int, 81> state) {
     this->state = state;
 }
 
-void Sudoku::solve(void) {
-    
+bool Sudoku::solve(void) {
+    return verify();
 }
 
 std::array<int, 81> Sudoku::get_state(void) {
@@ -52,33 +54,29 @@ std::ostream& operator<<(std::ostream& o, const Sudoku& s) {
 
 bool Sudoku::verify(void) {
     for(int i = 0; i < 9; ++i) {
-        if(!verify_grp(i)) return false;
-        if(!verify_row(i)) return false;
-        if(!verify_col(i)) return false;
+        if(!verify_cmp(i, grp)) return false;
+        if(!verify_cmp(i, row)) return false;
+        if(!verify_cmp(i, col)) return false;
     }
     return true;
 }
 
-bool Sudoku::verify_grp(int grp) {
+// Verify complete
+bool Sudoku::verify_cmp(int j, std::function<int(int, int)> f) {
     uint16_t verify = 0;
     for(int i = 0; i < 9; ++i) {
-        verify = verify | ((uint16_t)pow(2, state.at(((i/3)*9)+i%3 + ((grp%3)*3)+(grp/3)*27)) >> 1);
+        verify = verify | ((uint16_t)pow(2, state.at(f(i, j))) >> 1);
     }
     return (verify == 511);
 }
 
-bool Sudoku::verify_row(int row) {
-    uint16_t verify = 0;
+// Verify incomplete
+bool Sudoku::verify_inc(int j, std::function<int(int, int)> f) {
+    std::vector<int> list;
     for(int i = 0; i < 9; ++i) {
-        verify = verify | ((uint16_t)pow(2, state.at(row*9 + i)) >> 1);
+        if(state.at(f(i, j)) != 0)
+            list.push_back(state.at(f(i, j)));
     }
-    return (verify == 511);
-}
-
-bool Sudoku::verify_col(int col) {
-    uint16_t verify = 0;
-    for(int i = 0; i < 9; ++i) {
-        verify = verify | ((uint16_t)pow(2, state.at(i*9 + col)) >> 1);
-    }
-    return (verify == 511);
+    auto last = std::unique(list.begin(), list.end());
+    return (last == list.end());
 }
